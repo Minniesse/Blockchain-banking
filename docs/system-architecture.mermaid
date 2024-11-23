@@ -1,0 +1,53 @@
+graph TD
+    subgraph "User Interface Layer"
+        UI[Web Interface]
+        W[Web3 Wallet]
+    end
+
+    subgraph "Application Layer"
+        API[API Gateway]
+        CS[Caching Service]
+        IS[Indexing Service]
+        NS[Notification Service]
+    end
+
+    subgraph "Smart Contract Layer"
+        LC[Lending Core Contract]
+        TC[Token Contract]
+        PC[Price Feed Contract]
+        GC[Governance Contract]
+    end
+
+    subgraph "External Services"
+        OC[Oracle Chain Link]
+        IPFS[IPFS Storage]
+    end
+
+    %% Connections
+    UI --> W
+    W --> API
+    API --> CS
+    API --> IS
+    API --> NS
+    
+    IS --> LC
+    CS --> LC
+    W --> LC
+    
+    LC --> TC
+    LC --> PC
+    LC --> GC
+    
+    PC --> OC
+    IS --> IPFS
+
+    %% Styling
+    classDef interface fill:#f9f,stroke:#333,stroke-width:2px
+    classDef contract fill:#bbf,stroke:#333,stroke-width:2px
+    classDef service fill:#bfb,stroke:#333,stroke-width:2px
+    classDef external fill:#fbb,stroke:#333,stroke-width:2px
+    
+    class UI,W interface
+    class LC,TC,PC,GC contract
+    class API,CS,IS,NS service
+    class OC,IPFS external
