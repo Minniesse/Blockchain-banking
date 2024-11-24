@@ -440,9 +440,149 @@
         .modal-body .action-btn {
             width: 100%;
         }
+
+        /* Receipt Modal Styles */
+        .receipt-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            min-width: 300px;
+            max-width: 400px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .receipt-logo {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .receipt-details {
+            margin: 15px 0;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .receipt-footer {
+            text-align: center;
+            border-top: 2px dashed #ccc;
+            margin-top: 15px;
+            padding-top: 10px;
+        }
+
+        .receipt-close {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        .receipt-close:hover {
+            background: #0056b3;
+        }
+
+        .progress-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .progress-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 300px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            height: 6px;
+            border-radius: 3px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        .progress {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-color);
+            border-radius: 3px;
+        }
+
+        .progress-text {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .progress-animate {
+            animation: progress-animation 2s infinite ease-in-out;
+        }
+
+        @keyframes progress-animation {
+            0% {
+                width: 0%;
+            }
+            50% {
+                width: 100%;
+            }
+            100% {
+                width: 0%;
+            }
+        }
+
+        /* Add overlay for blur effect */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
+    <div id="overlay" class="overlay"></div>
+
     <nav class="navbar">
         <div class="logo">
             <i class="fas fa-wallet"></i> ETH Banking
@@ -593,6 +733,22 @@
                 </div>
                 <button class="action-btn" onclick="borrow()">Confirm Borrow</button>
             </div>
+        </div>
+    </div>
+
+    <div id="receiptModal" class="receipt-modal">
+        <div class="receipt-header">
+            <div class="receipt-logo">🏦</div>
+            <h3>Transaction Receipt</h3>
+            <div id="receiptTimestamp"></div>
+        </div>
+        <div class="receipt-details" id="receiptDetails">
+            <!-- Details will be inserted here -->
+        </div>
+        <div class="receipt-footer">
+            <div>Thank you for using our service!</div>
+            <div>*** Keep this receipt for your records ***</div>
+            <button class="receipt-close" onclick="closeReceipt()">Close</button>
         </div>
     </div>
 

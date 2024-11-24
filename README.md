@@ -37,209 +37,198 @@ This application fits perfectly with blockchain technology because:
 
 ## System Architecture
 
-Our DeFi Lending Protocol implements a three-layer architecture with external service integration:
+Our DeFi Lending Protocol implements a client-side web architecture:
 
 1. User Interface Layer:
-- Web Interface: React-based frontend application
-- Web3 Wallet: MetaMask or other Ethereum wallet integration
-- Provides user interface for lending, borrowing, and managing positions
+- HTML/CSS-based frontend application (index.html, login.html)
+- Web3 integration via ethers.js
+- Responsive design with modern UI components
+- Transaction receipt system for operation feedback
 
 2. Application Layer:
-- API Gateway: Handles all external requests and Web3 interactions
-- Caching Service: Optimizes data retrieval and reduces blockchain queries
-- Indexing Service: Maintains organized transaction history and user activities
-- Notification Service: Alerts users about important events (liquidation risks, etc.)
+- Client-side JavaScript (app.js, login.js)
+- Balance caching system for performance optimization
+- Transaction logging and monitoring
+- State management for lending pool operations
 
-3. Smart Contract Layer:
-- Lending Core Contract: Main contract handling lending/borrowing logic
-- Token Contract: ERC-20 compatible contract for handling supported assets
-- Price Feed Contract: Manages price oracle integration
-- Governance Contract: Handles protocol parameters and upgrades
+3. Smart Contract Interaction Layer:
+- Ethers.js provider and signer setup
+- Local blockchain connection (http://127.0.0.1:8545)
+- Transaction handling and event management
+- Balance and state updates
 
-4. External Services:
-- Chainlink Oracle: Provides reliable price feeds
-- IPFS Storage: Stores additional metadata and documentation
+4. Testing and Monitoring:
+- Automated test cases for all operations
+- Transaction logging system
+- Local storage for persistent data
+- Performance monitoring
 
 ## System Requirements
 
 ### Functional Requirements:
 • User Account Management
-  - Users can connect their Web3 wallets
-  - Users can view their lending/borrowing positions
-  - Users can check their collateral ratios
+  - Users can connect to local blockchain network
+  - Users can select from available accounts
+  - Users can view real-time balance updates
+  - Users can monitor transaction history
 
 • Lending Functions
-  - Users can deposit supported cryptocurrencies into lending pools
-  - Users can withdraw their deposited assets plus earned interest
-  - Users can view current lending APY rates
+  - Users can deposit ETH into lending pools
+  - Users can withdraw their deposited assets
+  - Users can view current APY rates (currently fixed at 5.5%)
+  - Transaction receipts provided for all operations
 
 • Borrowing Functions
-  - Users can borrow assets by providing collateral
+  - Users can borrow ETH against collateral
   - Users can repay loans partially or fully
-  - Users can add or remove collateral
-  - System automatically calculates interest rates based on pool utilization
+  - Collateral ratio maintained at 150%
+  - Health factor monitoring implemented
 
-• Liquidation Functions
-  - System monitors collateral ratios
-  - Automatic liquidation triggers when positions become under-collateralized
-  - Liquidators can execute liquidation transactions
+• Transfer Functions
+  - Users can transfer ETH to other users
+  - Friend list management
+  - Transaction history tracking
+  - Balance caching for performance
 
 ### Non-functional Requirements:
 • Performance
-  - Smart contract transactions should complete within 2-3 block confirmations
-  - UI should update within 3 seconds of blockchain confirmation
-  - System should handle at least 1000 concurrent users
+  - Balance caching with 5-second duration
+  - Batch balance fetching for multiple accounts
+  - Optimized UI updates
+  - Responsive transaction feedback
 
 • Security
-  - Smart contracts must be audited before deployment
-  - Multi-signature requirements for admin functions
-  - Emergency pause functionality for critical issues
-  - Rate limiting for API calls
+  - Transaction validation
+  - Balance checks before operations
+  - Error handling for all operations
+  - Secure local storage implementation
 
-• Reliability
-  - System should maintain 99.9% uptime
-  - Fallback oracle providers for price feeds
-  - Automatic backup of indexed data
+• User Experience
+  - Modal-based operation interfaces
+  - Transaction receipts
+  - Real-time balance updates
+  - Friend list management
 
-### Other Requirements:
-• Regulatory Compliance
-  - KYC/AML integration capability
-  - Transaction monitoring system
-  - Compliance reporting functionality
+## Test Cases
 
-• Development Requirements
-  - Solidity version >=0.8.0
-  - OpenZeppelin security standards
-  - Comprehensive test coverage (>95%)
-  - Documentation in NatSpec format
+The application includes comprehensive test cases:
 
-## Use Case Scenarios
+1. Deposit Tests:
+- Test Case: Deposit 1.0 ETH
+- Test Case: Deposit 2.5 ETH
+- Validation: Balance updates, event logging
 
-### Use Case ID: UC-001
-Use Case Name: Deposit Assets into Lending Pool
-Use Case Description: User deposits supported cryptocurrency assets into the lending pool to earn interest
-Stakeholders: 
-- Depositor (Primary user)
-- Smart Contract System
-- Price Oracle
-Steps/Procedures:
-1. User connects Web3 wallet to platform
-2. User selects asset type to deposit
-   2a. System checks if asset is supported
-   2b. If not supported, shows error message
-3. User enters deposit amount
-   3a. System checks wallet balance
-   3b. If insufficient balance, shows error message
-4. User approves token spending
-5. User confirms deposit transaction
-6. System:
-   6a. Transfers tokens from user wallet
-   6b. Mints equivalent lending tokens
-   6c. Updates user position
-7. System displays confirmation and new balance
+2. Borrow Tests:
+- Test Case: Borrow 0.5 ETH
+- Test Case: Borrow 1.0 ETH
+- Validation: Collateral checks, health factor updates
 
-### Use Case ID: UC-002
-Use Case Name: Borrow Assets Using Collateral
-Use Case Description: User borrows assets by providing cryptocurrency collateral
-Stakeholders:
-- Borrower (Primary user)
-- Smart Contract System
-- Price Oracle
-- Risk Assessment System
-Steps/Procedures:
-1. User connects Web3 wallet
-2. User selects collateral asset and amount
-   2a. System validates collateral asset
-   2b. System checks wallet balance
-3. User selects asset to borrow and amount
-4. System:
-   4a. Calculates maximum borrowing capacity
-   4b. Validates borrowing amount against collateral
-   4c. Displays health factor and interest rate
-5. User approves collateral token transfer
-6. User confirms borrowing transaction
-7. System:
-   7a. Transfers collateral to protocol
-   7b. Transfers borrowed assets to user
-   7c. Updates user position and risk metrics
+3. Repay Tests:
+- Test Case: Repay 0.3 ETH
+- Test Case: Repay 0.7 ETH
+- Validation: Loan position updates, collateral release
 
-[Additional use cases UC-003 through UC-005 are implemented in the code but omitted here for brevity]
+4. Withdraw Tests:
+- Test Case: Withdraw 0.5 ETH
+- Test Case: Withdraw 1.0 ETH
+- Validation: Balance updates, position checks
 
-## Smart Contract List:
+5. Transfer Tests:
+- Test Case: Transfer 0.1 ETH
+- Validation: Sender/receiver balance updates
 
-1. LendingPool Contract:
-- Purpose: Core contract managing lending and borrowing operations
-- Inputs: User address, token address, amount, operation type
-- Outputs: Operation status, updated positions, events
-- Key functions: deposit(), withdraw(), borrow(), repay()
+## Implementation Details
 
-2. TokenVault Contract:
-- Purpose: Manages token storage and handling
-- Inputs: Token address, amount, operation type
-- Outputs: Operation status, vault balances, events
-- Key functions: deposit(), withdraw(), getBalance()
+### Key Components:
 
-3. PriceOracle Contract:
-- Purpose: Provides price data for assets
-- Inputs: Token address, price feed address
-- Outputs: Current prices, validity status
-- Key functions: getPrice(), updatePrice()
+1. User Interface (index.html):
+- Modern responsive design
+- Modal-based operations
+- Real-time balance display
+- Transaction history view
 
-4. LiquidationManager Contract:
-- Purpose: Handles under-collateralized position liquidations
-- Inputs: Position details, liquidation parameters
-- Outputs: Liquidation results, updated positions
-- Key functions: liquidate(), calculateHealthFactor()
+2. Authentication (login.html):
+- Account selection interface
+- Account details display
+- Session management
 
-5. GovernanceController Contract:
-- Purpose: Manages protocol parameters and governance
-- Inputs: Proposal details, voting parameters
-- Outputs: Voting results, executed changes
-- Key functions: propose(), vote(), execute()
+3. Core Logic (app.js):
+- Lending pool operations
+- Balance management
+- Transaction handling
+- Event logging
 
-Link to Video File: [Your video link here]
+4. Authentication Logic (login.js):
+- Account initialization
+- Provider setup
+- Session handling
+
+### Key Features:
+
+1. Balance Management:
+- Caching system with 5-second duration
+- Batch balance fetching
+- Real-time updates
+
+2. Transaction Logging:
+- Detailed operation logging
+- Local storage persistence
+- Transaction receipts
+- Test case results
+
+3. Lending Pool:
+- Fixed 5.5% APY
+- 150% collateral ratio
+- Health factor monitoring
+- Proportional collateral release
+
+4. User Experience:
+- Modal interfaces
+- Transaction feedback
+- Friend list management
+- Balance caching
 
 ## Security Analysis
 
-(1) Application Security Assessment:
-- Smart contracts implement comprehensive access controls
-- Critical functions are protected by reentrancy guards
-- Emergency pause functionality for risk mitigation
-- Multi-signature requirements for administrative actions
-- Timelock delays for parameter changes
+(1) Application Security Implementation:
+- Balance validation before operations
+- Transaction confirmation waiting
+- Error handling for all operations
+- Local storage for transaction logs
 
-(2) Data Protection:
-- Personal data is stored off-chain
-- On-chain data limited to essential financial information
-- Asset transfers protected by approval mechanisms
-- Price feeds secured through Chainlink oracles
+(2) Data Management:
+- Client-side balance caching
+- Transaction history logging
+- State management for lending operations
+- Session handling for user accounts
 
-(3) Security Implementations:
-- OpenZeppelin security patterns utilized
-- Regular security audits required
-- Automated monitoring systems
-- Circuit breakers for emergency situations
+(3) Security Features:
+- Transaction validation
+- Balance checks
+- Error handling
+- Secure local storage
 
 ## Privacy Analysis
 
-(1) Personal Data Usage:
-- Minimal personal information collected
-- Wallet addresses pseudonymized
-- Optional KYC information stored off-chain
-- Transaction history publicly visible but pseudonymous
+(1) Data Handling:
+- Local blockchain interaction
+- Client-side state management
+- Transaction logging
+- Balance caching
 
 (2) Privacy Features:
-- Anonymity: Basic anonymity through wallet addresses
-- Conditional Privacy: Optional KYC for higher limits
-- Selective Disclosure: Users control information sharing
+- Local network operations
+- Client-side processing
+- Minimal data storage
+- Transaction logging
 
-(3) Privacy Techniques Analysis:
+(3) Technical Implementation:
 
-| Techniques | Included? | Justifications |
-|------------|-----------|----------------|
-| Zero-Knowledge Proof | No | Not implemented in current version due to gas cost considerations. Future versions may include for specific operations. |
-| Ring Signatures | No | Not necessary for basic lending operations. Could be added for enhanced privacy in future versions. |
-| Stealth Addresses | No | Standard Ethereum addresses used for transparency and auditability. |
-| Encryption | Yes | Used for off-chain data storage and communication. |
-| Data Minimization | Yes | Only essential information stored on-chain. |
+| Feature | Implementation | Details |
+|---------|----------------|----------|
+| Balance Caching | Yes | 5-second duration cache for performance |
+| Transaction Logs | Yes | Local storage with detailed operation tracking |
+| State Management | Yes | Client-side lending pool state handling |
+| Error Handling | Yes | Comprehensive error catching and user feedback |
+| Testing System | Yes | Automated test cases for all operations |
 
