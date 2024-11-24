@@ -3,756 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETH Banking</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-color: #4E2A84;  /* K Plus purple */
-            --secondary-color: #8A5FD4;
-            --accent-color: #6236FF;
-            --success-color: #00C48C;
-            --warning-color: #FFB323;
-            --danger-color: #FF5C5C;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #F5F6FA;
-        }
-
-        .navbar {
-            background: var(--primary-color);
-            padding: 1rem 2rem;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 2rem;
-        }
-
-        .balance-card, .lending-pool-card, .friends-section {
-            padding: 2rem;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .balance-title {
-            font-size: 1rem;
-            opacity: 0.9;
-            margin-bottom: 1rem;
-        }
-
-        .balance {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
-        }
-
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .action-btn {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(98, 54, 255, 0.2);
-        }
-
-        .friends-section {
-            margin-bottom: 0;
-            height: 400px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #friendsList {
-            overflow-y: auto;
-            flex-grow: 1;
-            padding-right: 10px;
-        }
-
-        #friendsList::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #friendsList::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        #friendsList::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 10px;
-        }
-
-        #friendsList::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-color);
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .friend-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 0.5rem;
-            transition: all 0.3s ease;
-            background: #F8F9FD;
-        }
-
-        .friend-item:hover {
-            transform: translateX(5px);
-            background: #F0F2F9;
-        }
-
-        .friend-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex: 1;
-        }
-
-        .friend-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            background: var(--accent-color);
-            flex-shrink: 0;
-        }
-
-        .friend-details {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .friend-name {
-            font-weight: 600;
-            color: #2D3748;
-        }
-
-        .friend-address {
-            font-size: 0.8rem;
-            color: #718096;
-        }
-
-        .friend-balance {
-            font-weight: 600;
-            color: var(--success-color);
-            padding-left: 1rem;
-        }
-
-        .transfer-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #4A5568;
-            font-weight: 500;
-        }
-
-        .input-group select,
-        .input-group input {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid #E2E8F0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .input-group select:focus,
-        .input-group input:focus {
-            border-color: var(--accent-color);
-            outline: none;
-        }
-
-        .send-btn {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .send-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(98, 54, 255, 0.2);
-        }
-
-        .recent-activity {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: #F8F9FD;
-            border-radius: 12px;
-        }
-
-        .activity-item {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            border-bottom: 1px solid #E2E8F0;
-        }
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-        }
-
-        .sent {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        .received {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .lending-pool-card {
-            margin-top: 0;
-        }
-
-        .pool-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            opacity: 0.9;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .pool-actions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .pool-btn {
-            background: rgba(78, 42, 132, 0.1); /* Light purple background */
-            border: none;
-            padding: 1rem;
-            border-radius: 12px;
-            color: var(--primary-color); /* Purple text color */
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            font-weight: 600; /* Make text slightly bolder */
-        }
-
-        .pool-btn:hover {
-            background: rgba(78, 42, 132, 0.2); /* Darker purple background on hover */
-            transform: translateY(-2px);
-        }
-
-        .borrowing-card {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .collateral-info {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .borrowing-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .pool-actions {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .close {
-            font-size: 2rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .modal-body {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #4A5568;
-            font-weight: 500;
-        }
-
-        .input-group select,
-        .input-group input {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid #E2E8F0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .input-group select:focus,
-        .input-group input:focus {
-            border-color: var(--accent-color);
-            outline: none;
-        }
-
-        .action-btn {
-            background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(98, 54, 255, 0.2);
-        }
-
-        .modal-body .action-btn {
-            width: 100%;
-        }
-
-        /* Receipt Modal Styles */
-        .receipt-modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            min-width: 300px;
-            max-width: 400px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .receipt-header {
-            text-align: center;
-            border-bottom: 2px dashed #ccc;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .receipt-logo {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .receipt-details {
-            margin: 15px 0;
-        }
-
-        .receipt-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-            font-size: 14px;
-        }
-
-        .receipt-footer {
-            text-align: center;
-            border-top: 2px dashed #ccc;
-            margin-top: 15px;
-            padding-top: 10px;
-        }
-
-        .receipt-close {
-            display: block;
-            width: 100%;
-            padding: 8px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            margin-top: 15px;
-            cursor: pointer;
-        }
-
-        .receipt-close:hover {
-            background: #0056b3;
-        }
-
-        .progress-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .progress-box {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            width: 300px;
-            text-align: center;
-        }
-
-        .progress-bar {
-            background: #f0f0f0;
-            height: 6px;
-            border-radius: 3px;
-            margin: 20px auto;
-            overflow: hidden;
-        }
-
-        .progress {
-            width: 0%;
-            height: 100%;
-            background: var(--accent-color);
-            border-radius: 3px;
-        }
-
-        .progress-text {
-            color: #333;
-            font-size: 16px;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-
-        .progress-animate {
-            animation: progress-animation 2s infinite ease-in-out;
-        }
-
-        @keyframes progress-animation {
-            0% {
-                width: 0%;
-            }
-            50% {
-                width: 100%;
-            }
-            100% {
-                width: 0%;
-            }
-        }
-
-        /* Add overlay for blur effect */
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            z-index: 999;
-        }
-    </style>
+    <title>Plutus - Banking DApp</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <div id="overlay" class="overlay"></div>
-
-    <nav class="navbar">
-        <div class="logo">
-            <i class="fas fa-wallet"></i> ETH Banking
-        </div>
-        <button class="action-btn" onclick="refreshAll()">
-            <i class="fas fa-sync-alt"></i>
-        </button>
-    </nav>
-
-    <div class="container">
-        <div class="left-section">
-            <div class="balance-card">
-                <div class="balance-title">Your Balance</div>
-                <div class="balance" id="balance">Loading...</div>
-                <div class="quick-actions">
-                    <button class="action-btn" onclick="getBalance()">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                    <button class="action-btn">
-                        <i class="fas fa-history"></i> History
-                    </button>
-                </div>
-            </div>
-
-            <div class="lending-pool-card">
-                <div class="section-title">
-                    <i class="fas fa-piggy-bank"></i> Lending Pool
-                </div>
-                <div class="pool-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">APY</div>
-                        <div class="stat-value" id="currentApy">0.00%</div>
+    <div class="app-container">
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>Dashboard</h1>
+                <div class="account-info">
+                    <span class="material-icons">notifications</span>
+                    <div class="account-avatar" id="currentAccount">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Account avatar">
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Your Deposits</div>
-                        <div class="stat-value" id="yourDeposits">0.00 ETH</div>
+                    <button class="logout-btn" onclick="logout()">
+                        <span class="material-icons">logout</span>
+                        Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- Balance Cards -->
+            <div class="balance-cards">
+                <div class="card total-balance">
+                    <div class="card-header">
+                        <h2>Total Balance</h2>
+                        <span class="percentage positive">↑ 2.36%</span>
+                    </div>
+                    <div class="balance-amount" id="walletBalance">ETH 0.00</div>
+                    <div class="balance-details">
+                        <div class="income">
+                            <span>Income</span>
+                            <div id="totalIncome">ETH 0.00</div>
+                        </div>
+                        <div class="expenses">
+                            <span>Expenses</span>
+                            <div id="totalExpenses">ETH 0.00</div>
+                        </div>
                     </div>
                 </div>
-                <div class="pool-actions">
-                    <button class="pool-btn deposit-btn" onclick="showDepositModal()">
-                        <i class="fas fa-plus"></i> Deposit
-                    </button>
-                    <button class="pool-btn withdraw-btn" onclick="showWithdrawModal()">
-                        <i class="fas fa-minus"></i> Withdraw
-                    </button>
+
+                <div class="card contract-balance">
+                    <div class="card-header">
+                        <h2>Contract Balance</h2>
+                        <span class="percentage positive">↑ 2.36%</span>
+                    </div>
+                    <div class="balance-amount" id="contractBalance">ETH 0.00</div>
+                    <div class="balance-chart">
+                        <!-- Add your chart here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="friends-section">
-                <div class="section-title">
-                    <i class="fas fa-users"></i> Friends
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <div class="card action-card">
+                    <h2>Quick Transfer</h2>
+                    <p class="helper-text">Direct wallet-to-wallet transfer (no deposit needed)</p>
+                    <div class="transfer-form">
+                        <select id="recipient" onchange="handleRecipientChange()">
+                            <option value="">Select recipient</option>
+                            <option value="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">Account 1</option>
+                            <option value="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC">Account 2</option>
+                            <option value="0x90F79bf6EB2c4f870365E785982E1f101E93b906">Account 3</option>
+                            <option value="custom">Custom address</option>
+                        </select>
+                        <input type="text" id="customAddress" placeholder="Enter custom address" style="display: none;">
+                        <input type="number" id="transferAmount" step="0.001" placeholder="Amount in ETH">
+                        <button onclick="transfer()">Send from Wallet</button>
+                    </div>
                 </div>
-                <div id="friendsList">
-                    <!-- Friends will be populated here -->
-                </div>
-            </div>
-        </div>
 
-        <div class="transfer-card">
-            <div class="section-title">
-                <i class="fas fa-paper-plane"></i> Send ETH
-            </div>
-            <div class="input-group">
-                <label>Select Recipient</label>
-                <select id="recipientSelect">
-                    <option value="">Choose friend</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Amount (ETH)</label>
-                <input type="number" id="amount" step="0.001" min="0" placeholder="0.00">
-            </div>
-            <button class="send-btn" onclick="transfer()">
-                Send Money
-            </button>
+                <div class="card action-card">
+                    <h2>Quick Deposit</h2>
+                    <div class="deposit-form">
+                        <input type="number" id="depositAmount" step="0.001" placeholder="Amount in ETH">
+                        <button onclick="deposit()">Deposit</button>
+                    </div>
+                </div>
 
-            <div class="recent-activity">
-                <div class="section-title">Recent Activity</div>
-                <!-- Activity items will be added here -->
+                <div class="card action-card">
+                    <h2>Quick Withdraw</h2>
+                    <div class="withdraw-form">
+                        <input type="number" id="withdrawAmount" step="0.001" placeholder="Amount in ETH">
+                        <button onclick="withdraw()">Withdraw</button>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="borrowing-card">
-            <div class="section-title">
-                <i class="fas fa-hand-holding-usd"></i> Borrowing
-            </div>
-            <div class="collateral-info">
-                <div class="stat-item">
-                    <div class="stat-label">Collateral Ratio</div>
-                    <div class="stat-value" id="collateralRatio">0%</div>
+            <!-- Transaction History -->
+            <div class="card transaction-history">
+                <div class="card-header">
+                    <h2>Recent Transactions</h2>
+                    <button class="view-all">View all</button>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">Health Factor</div>
-                    <div class="stat-value" id="healthFactor">0.00</div>
-                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionHistory">
+                    </tbody>
+                </table>
             </div>
-            <div class="borrowing-stats">
-                <div class="stat-item">
-                    <div class="stat-label">Your Collateral</div>
-                    <div class="stat-value" id="yourCollateral">0.00 ETH</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Your Debt</div>
-                    <div class="stat-value" id="yourDebt">0.00 ETH</div>
-                </div>
-            </div>
-            <div class="pool-actions">
-                <button class="pool-btn borrow-btn" onclick="showBorrowModal()">
-                    <i class="fas fa-download"></i> Borrow
-                </button>
-                <button class="pool-btn repay-btn" onclick="showRepayModal()">
-                    <i class="fas fa-upload"></i> Repay
-                </button>
-            </div>
-        </div>
+        </main>
     </div>
 
-    <div id="depositModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Deposit ETH</h2>
-                <span class="close" onclick="closeModal('depositModal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="input-group">
-                    <label>Amount to Deposit</label>
-                    <input type="number" id="depositAmount" step="0.001" min="0" placeholder="0.00">
-                </div>
-                <div class="apy-info">Current APY: <span id="modalApy">0.00%</span></div>
-                <button class="action-btn" onclick="deposit()">Confirm Deposit</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="borrowModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Borrow ETH</h2>
-                <span class="close" onclick="closeModal('borrowModal')">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="input-group">
-                    <label>Amount to Borrow</label>
-                    <input type="number" id="borrowAmount" step="0.001" min="0" placeholder="0.00">
-                </div>
-                <div class="collateral-info">
-                    Required Collateral: <span id="requiredCollateral">0.00 ETH</span>
-                </div>
-                <button class="action-btn" onclick="borrow()">Confirm Borrow</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="receiptModal" class="receipt-modal">
-        <div class="receipt-header">
-            <div class="receipt-logo">🏦</div>
-            <h3>Transaction Receipt</h3>
-            <div id="receiptTimestamp"></div>
-        </div>
-        <div class="receipt-details" id="receiptDetails">
-            <!-- Details will be inserted here -->
-        </div>
-        <div class="receipt-footer">
-            <div>Thank you for using our service!</div>
-            <div>*** Keep this receipt for your records ***</div>
-            <button class="receipt-close" onclick="closeReceipt()">Close</button>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <div id="notifications"></div>
     <script src="app.js"></script>
+
+    <!-- Add this before the closing body tag -->
+    <div class="modal-backdrop" id="receiptModal">
+        <div class="receipt-modal">
+            <div class="receipt-header">
+                <span class="material-icons" style="font-size: 48px; color: #34a853; margin-bottom: 1rem;">
+                    check_circle
+                </span>
+                <h2>Transaction Receipt</h2>
+                <p id="receiptStatus" style="color: #34a853;">Transaction Successful</p>
+            </div>
+            <div class="receipt-content">
+                <div class="receipt-row">
+                    <span class="receipt-label">Transaction Type</span>
+                    <span class="receipt-value" id="receiptType">Transfer</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Amount</span>
+                    <span class="receipt-value" id="receiptAmount">0.00 ETH</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">From</span>
+                    <span class="receipt-value" id="receiptFrom">0x000...000</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">To</span>
+                    <span class="receipt-value" id="receiptTo">0x000...000</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Transaction Hash</span>
+                    <span class="receipt-value" id="receiptHash">0x000...000</span>
+                </div>
+                <div class="receipt-row">
+                    <span class="receipt-label">Time</span>
+                    <span class="receipt-value" id="receiptTime">00:00:00</span>
+                </div>
+            </div>
+            <div class="receipt-footer">
+                <button class="close-receipt" onclick="closeReceipt()">Close</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

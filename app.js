@@ -1,930 +1,645 @@
+// Global variables
 let provider;
-let signer;
-let friends = [];
-let cachedChainId = null;
-let lastBalanceCheck = {
-    timestamp: 0,
-    balance: null
+let wallet;
+let contract;
+
+// Add these at the top of your file
+const deploymentAddresses = {
+    "localhost": {
+        "Bank": "0x5FbDB2315678afecb367f032d93F642f64180aa3" // This is the default first contract address in Hardhat
+    }
 };
 
-// Add lending pool state
-let lendingPoolState = {
-    totalDeposits: 0,
-    apy: 5.5, // Mock APY
-    userDeposits: 0,
-    userBorrows: 0,
-    collateralRatio: 150, // 150% collateral required
-    healthFactor: 1.0
+const contractArtifact = {
+    abi: [
+        {
+            "inputs": [],
+            "name": "getBalance",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "deposit",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "withdraw",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ]
 };
 
-// Add logging system
-const transactionLogs = [];
-
-// Replace the single balance cache with a map of address-specific caches
-let balanceCache = new Map();
-const CACHE_DURATION = 5000; // Increase cache duration to 5 seconds
-
-function getMockName(address, index) {
-    const names = [
-        "Alice", "Bob", "Charlie", "David", "Eva",
-        "Frank", "Grace", "Henry", "Ivy", "Jack",
-        "Kelly", "Liam", "Maria", "Noah", "Olivia",
-        "Paul", "Quinn", "Rachel", "Sam", "Tom"
-    ];
-    return names[index] || `Friend ${index + 1}`;
-}
-
-async function initializeEthers() {
+// Get contract address based on network
+async function getContractAddress() {
     try {
-        const selectedAccount = localStorage.getItem('selectedAccount');
-        if (!selectedAccount) {
-            window.location.href = 'login.html';
-            return;
-        }
-
-        provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
+        const network = await provider.getNetwork();
+        console.log("Connected to network:", network.name);
         
-        // Cache chainId
-        if (!cachedChainId) {
-            cachedChainId = await provider.getNetwork().then(network => network.chainId);
+        if (network.name === "unknown") { // Local network
+            return deploymentAddresses.localhost.Bank;
         }
         
-        signer = provider.getSigner(selectedAccount);
-        const userAddress = await signer.getAddress();
-        
-        const accounts = await provider.listAccounts();
-        friends = await Promise.all(
-            accounts
-                .filter(address => address.toLowerCase() !== userAddress.toLowerCase())
-                .map(async (address, index) => {
-                    const balance = await getCachedBalance(address);
-                    return {
-                        name: getMockName(address, index),
-                        address: address,
-                        balance: ethers.utils.formatEther(balance)
-                    };
-                })
-        );
-        
-        // Initialize all UI elements
-        await updateAllUI();
-        
-        // Load saved logs
-        loadLogsFromLocalStorage();
-        
-        // Add test button to UI (optional)
-        addTestButton();
+        // Add logic for other networks if needed
+        throw new Error("Unsupported network");
     } catch (error) {
-        console.error("Error initializing:", error);
-        document.getElementById("balance").innerHTML = "Error connecting to network";
+        console.error("Error getting contract address:", error);
+        return deploymentAddresses.localhost.Bank; // Fallback to localhost address
     }
 }
 
-// Modal functions
-function showDepositModal() {
-    const modal = document.getElementById('depositModal');
-    document.getElementById('modalApy').textContent = `${lendingPoolState.apy}%`;
-    modal.style.display = "block";
+// Initialize the application
+async function init() {
+    try {
+        // Check if user is logged in
+        const selectedAccountKey = localStorage.getItem('selectedAccount');
+        if (!localStorage.getItem('isLoggedIn') || !selectedAccountKey) {
+            window.location.href = 'account.html';
+            return;
+        }
+
+        // Connect to local Hardhat network
+        provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
+        
+        // Create wallet instance with the selected account's private key
+        wallet = new ethers.Wallet(selectedAccountKey, provider);
+        const address = await wallet.getAddress();
+        
+        // Update only the avatar with the account's address as seed
+        document.querySelector('#currentAccount img').src = 
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${address}`;
+        
+        // Get contract address and initialize contract
+        const contractAddress = await getContractAddress();
+        console.log("Using contract address:", contractAddress);
+        console.log("Connected with account:", address);
+        
+        contract = new ethers.Contract(contractAddress, contractArtifact.abi, wallet);
+        
+        // Initial UI updates
+        await updateBalances();
+        await loadTransactions();
+        
+        // Set up periodic updates
+        setInterval(updateBalances, 5000);
+        
+        console.log('Initialization complete');
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Failed to initialize application: ' + error.message, true);
+    }
 }
 
-function showBorrowModal() {
-    const modal = document.getElementById('borrowModal');
-    modal.style.display = "block";
-    updateRequiredCollateral();
+// Add this function for batch fetching
+async function batchFetchBalances() {
+    try {
+        // Create a batch provider
+        const batch = [];
+        
+        // Get wallet address
+        const address = await wallet.getAddress();
+        
+        // Add balance requests to batch
+        batch.push(provider.getBalance(address));
+        if (contract) {
+            batch.push(contract.getBalance());
+        }
+        
+        // Execute all promises in parallel
+        const [walletBalance, contractBalance] = await Promise.all(batch);
+        
+        // Update UI with results
+        document.getElementById('walletBalance').textContent = 
+            `ETH ${parseFloat(ethers.utils.formatEther(walletBalance)).toFixed(4)}`;
+        
+        if (contractBalance) {
+            document.getElementById('contractBalance').textContent = 
+                `ETH ${parseFloat(ethers.utils.formatEther(contractBalance)).toFixed(4)}`;
+        }
+        
+        console.log('Batch balance fetch complete');
+        return { walletBalance, contractBalance };
+    } catch (error) {
+        console.error('Batch fetch error:', error);
+        showNotification('Failed to fetch balances', true);
+    }
 }
 
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = "none";
+// Update the updateBalances function to use batch fetching
+async function updateBalances() {
+    try {
+        const balances = await batchFetchBalances();
+        
+        // Calculate and update income/expenses if needed
+        if (balances) {
+            // You can add logic here to calculate income/expenses from transaction history
+            const transactions = JSON.parse(localStorage.getItem(TRANSACTION_HISTORY_KEY) || '[]');
+            
+            let income = 0;
+            let expenses = 0;
+            
+            transactions.forEach(tx => {
+                if (tx.type === 'Received' || tx.type === 'Deposit') {
+                    income += parseFloat(tx.amount);
+                } else if (tx.type === 'Sent' || tx.type === 'Withdraw') {
+                    expenses += parseFloat(tx.amount);
+                }
+            });
+            
+            document.getElementById('totalIncome').textContent = `ETH ${income.toFixed(4)}`;
+            document.getElementById('totalExpenses').textContent = `ETH ${expenses.toFixed(4)}`;
+        }
+        
+        console.log('Balances updated');
+    } catch (error) {
+        console.error('Error updating balances:', error);
+        showNotification('Failed to update balances', true);
+    }
 }
 
-// Lending pool functions
+// Add event listeners when the page loads
+window.addEventListener('load', async () => {
+    try {
+        await init();
+    } catch (error) {
+        console.error('Failed to load application:', error);
+        showNotification('Failed to load application', true);
+    }
+});
+
+// Add this if you want to test the connection immediately
+async function testConnection() {
+    try {
+        const blockNumber = await provider.getBlockNumber();
+        console.log('Current block number:', blockNumber);
+        return true;
+    } catch (error) {
+        console.error('Connection test failed:', error);
+        return false;
+    }
+}
+
+// Add these functions for transaction history management
+const TRANSACTION_HISTORY_KEY = 'transactionHistory';
+
+function saveTransaction(transaction) {
+    try {
+        // Get existing transactions
+        let transactions = JSON.parse(localStorage.getItem(TRANSACTION_HISTORY_KEY) || '[]');
+        
+        // Add new transaction
+        transactions.push({
+            ...transaction,
+            timestamp: Date.now(),
+            status: 'Completed'
+        });
+        
+        // Keep only last 50 transactions
+        transactions = transactions.slice(-50);
+        
+        // Save back to localStorage
+        localStorage.setItem(TRANSACTION_HISTORY_KEY, JSON.stringify(transactions));
+        
+        // Update UI
+        loadTransactions();
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+    }
+}
+
+// Add batch transaction fetching
+async function batchFetchTransactions(fromBlock = 0, toBlock = 'latest') {
+    try {
+        const address = await wallet.getAddress();
+        
+        // Create filter for sent and received transactions
+        const sentFilter = {
+            fromBlock,
+            toBlock,
+            from: address
+        };
+        
+        const receivedFilter = {
+            fromBlock,
+            toBlock,
+            to: address
+        };
+        
+        // Fetch transactions in parallel
+        const [sentTxs, receivedTxs] = await Promise.all([
+            provider.getLogs(sentFilter),
+            provider.getLogs(receivedFilter)
+        ]);
+        
+        // Combine and process transactions
+        const allTxs = [...sentTxs, ...receivedTxs].map(async tx => {
+            const receipt = await provider.getTransactionReceipt(tx.transactionHash);
+            return {
+                hash: tx.transactionHash,
+                type: tx.from.toLowerCase() === address.toLowerCase() ? 'Sent' : 'Received',
+                amount: ethers.utils.formatEther(tx.value || '0'),
+                timestamp: (await provider.getBlock(tx.blockNumber)).timestamp * 1000,
+                status: receipt.status ? 'Completed' : 'Failed'
+            };
+        });
+        
+        return await Promise.all(allTxs);
+    } catch (error) {
+        console.error('Batch transaction fetch error:', error);
+        return [];
+    }
+}
+
+// Update loadTransactions to use batch fetching
+async function loadTransactions() {
+    try {
+        const tbody = document.getElementById('transactionHistory');
+        if (!tbody) return;
+        
+        tbody.innerHTML = ''; // Clear existing transactions
+        
+        // Get transactions from both localStorage and blockchain
+        const localTxs = JSON.parse(localStorage.getItem(TRANSACTION_HISTORY_KEY) || '[]');
+        const chainTxs = await batchFetchTransactions();
+        
+        // Combine and sort transactions
+        const allTransactions = [...localTxs, ...chainTxs]
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, 50); // Keep only last 50 transactions
+        
+        if (allTransactions.length === 0) {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = 'No transactions';
+            row.insertCell(1).textContent = '-';
+            row.insertCell(2).textContent = '-';
+            row.insertCell(3).textContent = '-';
+            return;
+        }
+
+        // Display transactions
+        allTransactions.forEach(tx => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = tx.type;
+            row.insertCell(1).textContent = `${tx.amount} ETH`;
+            row.insertCell(2).textContent = new Date(tx.timestamp).toLocaleString();
+            row.insertCell(3).textContent = tx.status;
+        });
+    } catch (error) {
+        console.error('Failed to load transactions:', error);
+        const tbody = document.getElementById('transactionHistory');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="4">Error loading transactions</td></tr>';
+        }
+    }
+}
+
+// Implement security checks
+function validateTransaction(amount, recipient) {
+    if (!ethers.utils.isAddress(recipient)) {
+        throw new Error('Invalid recipient address');
+    }
+    if (amount <= 0 || amount > maxTransactionLimit) {
+        throw new Error('Invalid transaction amount');
+    }
+}
+
+// Add emergency pause functionality
+async function emergencyPause() {
+    if (!isAdmin) throw new Error('Unauthorized');
+    await contract.pause();
+    showNotification('System paused for emergency');
+}
+
+// Implement price feed
+async function getAssetPrice(tokenAddress) {
+    try {
+        const price = await contract.getLatestPrice(tokenAddress);
+        return ethers.utils.formatUnits(price, 8); // Assuming 8 decimals
+    } catch (error) {
+        showNotification('Error fetching price', true);
+        throw error;
+    }
+}
+
+// Enhanced notification system
+function showNotification(message, isError = false, duration = 3000) {
+    const notification = document.createElement('div');
+    notification.className = `notification${isError ? ' error' : ''}`;
+    notification.textContent = message;
+    
+    // Add animation
+    notification.style.animation = 'slideIn 0.5s ease-out';
+    
+    document.getElementById('notifications').appendChild(notification);
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.5s ease-in';
+        setTimeout(() => notification.remove(), 500);
+    }, duration);
+}
+
+async function checkHealthFactor() {
+    try {
+        const healthFactor = await contract.calculateHealthFactor(wallet.address);
+        if (healthFactor.lt(ethers.utils.parseUnits('1.5', 18))) {
+            showNotification('Warning: Low health factor', true);
+        }
+        return healthFactor;
+    } catch (error) {
+        console.error('Error checking health factor:', error);
+    }
+}
+
+function updateUI(data) {
+    // Update balance displays
+    document.getElementById('walletBalance').textContent = 
+        `ETH ${parseFloat(ethers.utils.formatEther(data.balance)).toFixed(4)}`;
+    
+    // Update health factor indicator
+    const healthFactor = data.healthFactor || 0;
+    const healthStatus = document.getElementById('healthStatus');
+    healthStatus.className = `health-status ${healthFactor < 1.5 ? 'warning' : 'good'}`;
+    
+    // Update transaction history
+    loadTransactions();
+}
+
+// Add deposit function
 async function deposit() {
     try {
         const amount = document.getElementById('depositAmount').value;
         if (!amount || amount <= 0) {
-            alert("Please enter a valid amount");
+            showNotification('Please enter a valid amount', true);
             return;
         }
 
-        const tx = await signer.sendTransaction({
-            to: await signer.getAddress(),
-            value: ethers.utils.parseEther(amount)
+        const tx = await contract.deposit({
+            value: ethers.utils.parseEther(amount.toString())
         });
         
-        const receipt = await tx.wait();
+        await tx.wait();
         
-        if (receipt.status === 1) {
-            lendingPoolState.userDeposits += Number(amount);
-            lendingPoolState.totalDeposits += Number(amount);
-            
-            await updateAllUI();
-            closeModal('depositModal');
-            document.getElementById('depositAmount').value = '';
-            
-            await logTransaction('DEPOSIT', {
-                amount,
-                initialBalance: await getBalanceNumber(),
-                finalBalance: await getBalanceNumber(),
-                txHash: receipt.transactionHash
-            });
-        }
+        // Save transaction
+        saveTransaction({
+            type: 'Deposit',
+            amount: amount,
+            from: await wallet.getAddress(),
+            to: contract.address,
+            hash: tx.hash
+        });
         
+        showNotification('Deposit transaction sent...');
+        
+        await tx.wait();
+        showNotification('Deposit successful!');
+        
+        // Show receipt
+        const address = await wallet.getAddress();
+        showTransactionReceipt(
+            'Deposit',
+            amount,
+            address,
+            contract.address,
+            tx.hash
+        );
+        
+        // Update balances
+        await updateBalances();
+        await loadTransactions();
+        
+        // Clear input
+        document.getElementById('depositAmount').value = '';
     } catch (error) {
-        console.error("Error depositing:", error);
-        alert("Error making deposit: " + error.message);
+        console.error('Deposit error:', error);
+        showNotification('Deposit failed: ' + error.message, true);
     }
 }
 
+// Add withdraw function
 async function withdraw() {
     try {
-        const amount = prompt("Enter amount to withdraw:");
-        if (!amount || amount <= 0 || amount > lendingPoolState.userDeposits) {
-            alert("Invalid withdrawal amount");
-            return;
-        }
-
-        lendingPoolState.userDeposits -= Number(amount);
-        lendingPoolState.totalDeposits -= Number(amount);
-        
-        await updateAllUI();
-        
-        logTransaction('WITHDRAW', {
-            amount,
-            initialBalance: await getBalanceNumber(),
-            finalBalance: await getBalanceNumber()
-        });
-    } catch (error) {
-        console.error("Error withdrawing:", error);
-        alert("Error withdrawing: " + error.message);
-    }
-}
-
-async function borrow() {
-    try {
-        const amount = document.getElementById('borrowAmount').value;
+        const amount = document.getElementById('withdrawAmount').value;
         if (!amount || amount <= 0) {
-            alert("Please enter a valid amount");
+            showNotification('Please enter a valid amount', true);
             return;
         }
 
-        const requiredCollateral = (amount * lendingPoolState.collateralRatio) / 100;
-        const userBalance = await getBalanceNumber();
+        const tx = await contract.withdraw(ethers.utils.parseEther(amount.toString()));
         
-        if (userBalance < requiredCollateral) {
-            alert("Insufficient balance for collateral");
-            return;
-        }
-
-        const tx = await signer.sendTransaction({
-            to: await signer.getAddress(),
-            value: ethers.utils.parseEther(amount.toString())
-        });
         await tx.wait();
-
-        lendingPoolState.userBorrows += Number(amount);
-        updateHealthFactor();
         
-        await updateAllUI();
-        closeModal('borrowModal');
-        document.getElementById('borrowAmount').value = '';
+        // Save transaction
+        saveTransaction({
+            type: 'Withdraw',
+            amount: amount,
+            from: contract.address,
+            to: await wallet.getAddress(),
+            hash: tx.hash
+        });
         
-        logTransaction('BORROW', {
-            amount,
-            initialBalance: await getBalanceNumber(),
-            finalBalance: await getBalanceNumber()
-        });
-    } catch (error) {
-        console.error("Error borrowing:", error);
-        alert("Error borrowing: " + error.message);
-    }
-}
-
-async function repay() {
-    try {
-        const amount = prompt("Enter amount to repay:");
-        if (!amount || amount <= 0 || amount > lendingPoolState.userBorrows) {
-            alert("Invalid repayment amount");
-            return;
-        }
-
-        const tx = await signer.sendTransaction({
-            to: await signer.getAddress(),
-            value: ethers.utils.parseEther(amount.toString())
-        });
+        showNotification('Withdraw transaction sent...');
+        
         await tx.wait();
-
-        lendingPoolState.userBorrows -= Number(amount);
-        updateHealthFactor();
+        showNotification('Withdrawal successful!');
         
-        await updateAllUI();
-        
-        logTransaction('REPAY', {
+        // Show receipt
+        const address = await wallet.getAddress();
+        showTransactionReceipt(
+            'Withdraw',
             amount,
-            initialBalance: await getBalanceNumber(),
-            finalBalance: await getBalanceNumber()
-        });
+            address,
+            contract.address,
+            tx.hash
+        );
+        
+        // Update balances
+        await updateBalances();
+        await loadTransactions();
+        
+        // Clear input
+        document.getElementById('withdrawAmount').value = '';
     } catch (error) {
-        console.error("Error repaying:", error);
-        alert("Error repaying: " + error.message);
+        console.error('Withdraw error:', error);
+        showNotification('Withdrawal failed: ' + error.message, true);
     }
 }
 
-// Helper functions
-function updateHealthFactor() {
-    if (lendingPoolState.userBorrows === 0) {
-        lendingPoolState.healthFactor = 999;
-        return;
-    }
-    
-    const collateralValue = lendingPoolState.userDeposits;
-    const borrowValue = lendingPoolState.userBorrows;
-    lendingPoolState.healthFactor = (collateralValue / borrowValue) * 100;
-}
-
-function updateRequiredCollateral() {
-    const borrowAmount = document.getElementById('borrowAmount').value;
-    const required = borrowAmount ? (borrowAmount * lendingPoolState.collateralRatio) / 100 : 0;
-    document.getElementById('requiredCollateral').textContent = `${required.toFixed(4)} ETH`;
-}
-
-async function getBalanceNumber() {
-    const balance = await getCachedBalance(await signer.getAddress());
-    return Number(ethers.utils.formatEther(balance));
-}
-
-// UI update functions
-async function updateAllUI() {
-    await getBalance();
-    await updateFriendsBalances();
-    await updateFriendsList();
-    await updateRecipientSelect();
-    updateLendingPoolUI();
-    updateBorrowingUI();
-}
-
-function updateLendingPoolUI() {
-    document.getElementById('currentApy').textContent = `${lendingPoolState.apy}%`;
-    document.getElementById('yourDeposits').textContent = `${lendingPoolState.userDeposits.toFixed(4)} ETH`;
-}
-
-function updateBorrowingUI() {
-    document.getElementById('collateralRatio').textContent = `${lendingPoolState.collateralRatio}%`;
-    document.getElementById('healthFactor').textContent = lendingPoolState.healthFactor.toFixed(2);
-    document.getElementById('yourCollateral').textContent = `${lendingPoolState.userDeposits.toFixed(4)} ETH`;
-    document.getElementById('yourDebt').textContent = `${lendingPoolState.userBorrows.toFixed(4)} ETH`;
-}
-
-async function updateFriendsList() {
-    const friendsList = document.getElementById("friendsList");
-    // Refresh friends' balances before updating the list
-    await updateFriendsBalances();
-    
-    friendsList.innerHTML = friends.map(friend => `
-        <div class="friend-item">
-            <div class="friend-info">
-                <div class="friend-avatar">${friend.name[0]}</div>
-                <div class="friend-details">
-                    <div class="friend-name">${friend.name}</div>
-                </div>
-            </div>
-            <div class="friend-balance">${Number(friend.balance).toFixed(4)} ETH</div>
-        </div>
-    `).join('');
-}
-
-function updateRecipientSelect() {
-    const select = document.getElementById("recipientSelect");
-    select.innerHTML = '<option value="">Select recipient</option>' + 
-        friends.map(friend => `
-            <option value="${friend.address}">${friend.name} - ${Number(friend.balance).toFixed(4)} ETH</option>
-        `).join('');
-}
-
-async function getBalance() {
+// Add this function to handle logout
+async function logout() {
     try {
-        const address = await signer.getAddress();
-        const balance = await getCachedBalance(address);
-        const etherBalance = ethers.utils.formatEther(balance);
-        document.getElementById("balance").innerHTML = `${Number(etherBalance).toFixed(4)} ETH`;
+        // Clear any stored data
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Reset contract and wallet
+        contract = null;
+        wallet = null;
+        
+        // Show notification
+        showNotification('Logged out successfully');
+        
+        // Redirect to account page
+        setTimeout(() => {
+            window.location.href = 'account.html'; // Redirect to account page
+        }, 1000);
+        
     } catch (error) {
-        console.error("Error getting balance:", error);
-        document.getElementById("balance").innerHTML = "Error fetching balance";
+        console.error('Logout error:', error);
+        showNotification('Logout failed: ' + error.message, true);
     }
 }
 
+// Add transfer function
 async function transfer() {
     try {
-        const recipient = document.getElementById("recipientSelect").value;
-        const amount = document.getElementById("amount").value;
-
-        if (!recipient || !amount) {
-            alert("Please select a recipient and enter an amount");
+        const amount = document.getElementById('transferAmount').value;
+        const recipientSelect = document.getElementById('recipient');
+        let recipient = recipientSelect.value;
+        
+        // Validate inputs
+        if (!amount || amount <= 0) {
+            showNotification('Please enter a valid amount', true);
+            return;
+        }
+        
+        if (!recipient) {
+            showNotification('Please select a recipient', true);
             return;
         }
 
-        const tx = await signer.sendTransaction({
+        // Convert amount to Wei
+        const transferAmount = ethers.utils.parseEther(amount.toString());
+        
+        // Check wallet balance
+        const balance = await provider.getBalance(wallet.address);
+        if (balance.lt(transferAmount)) {
+            showNotification('Insufficient balance', true);
+            return;
+        }
+
+        // Create and send transaction
+        const tx = await wallet.sendTransaction({
             to: recipient,
-            value: ethers.utils.parseEther(amount)
+            value: transferAmount
         });
         
-        const receipt = await tx.wait();
+        await tx.wait();
         
-        if (receipt.status === 1) {
-            await getBalance();
-            await updateFriendsBalances();
-            await updateFriendsList();
-            await updateRecipientSelect();
-            
-            document.getElementById("amount").value = "";
-            document.getElementById("recipientSelect").value = "";
-            
-            await logTransaction('TRANSFER', {
-                amount,
-                recipient,
-                initialBalance: await getBalanceNumber(),
-                finalBalance: await getBalanceNumber(),
-                txHash: receipt.transactionHash
-            });
-        }
-        
-    } catch (error) {
-        console.error("Error transferring:", error);
-        alert("Error transferring ETH: " + error.message);
-    }
-}
-
-async function updateFriendsBalances() {
-    const addresses = friends.map(friend => friend.address);
-    const balances = await batchGetBalances(addresses);
-    
-    friends.forEach(friend => {
-        const balance = balances.get(friend.address);
-        if (balance) {
-            friend.balance = ethers.utils.formatEther(balance);
-        }
-    });
-}
-
-// Add a refresh function
-async function refreshAll() {
-    try {
-        const userAddress = await signer.getAddress();
-        const allAddresses = [userAddress, ...friends.map(f => f.address)];
-        
-        // Fetch all balances in one batch
-        balanceCache.clear();
-        const balances = await batchGetBalances(allAddresses);
-        
-        // Update UI with new balances
-        const userBalance = balances.get(userAddress);
-        if (userBalance) {
-            document.getElementById("balance").innerHTML = 
-                `${Number(ethers.utils.formatEther(userBalance)).toFixed(4)} ETH`;
-        }
-        
-        // Update friends' balances
-        friends.forEach(friend => {
-            const balance = balances.get(friend.address);
-            if (balance) {
-                friend.balance = ethers.utils.formatEther(balance);
-            }
+        // Save transaction
+        saveTransaction({
+            type: 'Transfer',
+            amount: amount,
+            from: await wallet.getAddress(),
+            to: recipient,
+            hash: tx.hash
         });
         
-        // Update UI components
-        await updateFriendsList();
-        await updateRecipientSelect();
-        updateLendingPoolUI();
-        updateBorrowingUI();
-    } catch (error) {
-        console.error("Error refreshing:", error);
-    }
-}
-
-// Initialize when page loads
-window.addEventListener('load', initializeEthers);
-
-// Add event listener for borrow amount input
-document.getElementById('borrowAmount')?.addEventListener('input', updateRequiredCollateral);
-
-// Close modals when clicking outside
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
-    }
-}
-
-// Add logging system
-async function logTransaction(type, details) {
-    const timestamp = new Date().toISOString();
-    const currentBalance = await getBalanceNumber();
-    
-    const log = {
-        timestamp,
-        type,
-        details,
-        currentBalance,
-        balanceSnapshot: { ...lendingPoolState }
-    };
-    
-    transactionLogs.push(log);
-    
-    // Enhanced console logging with current balance
-    console.log('Transaction Log:', {
-        ...log,
-        currentBalance: `${currentBalance} ETH`
-    });
-    console.log('Current Balance:', `${currentBalance} ETH`);
-    console.log('-------------------');
-    
-    // Show receipt
-    await showTransactionReceipt(type, details, currentBalance);
-    
-    // Save to localStorage
-    saveLogsToLocalStorage();
-    
-    // Update recent activity
-    await updateRecentActivity();
-}
-
-function saveLogsToLocalStorage() {
-    localStorage.setItem('transactionLogs', JSON.stringify(transactionLogs));
-}
-
-function loadLogsFromLocalStorage() {
-    const savedLogs = localStorage.getItem('transactionLogs');
-    if (savedLogs) {
-        transactionLogs.push(...JSON.parse(savedLogs));
-    }
-}
-
-// Test cases function
-async function runTestCases() {
-    console.log('Starting Test Cases...');
-    
-    try {
-        // Test Case 1: Deposit
-        console.log('\nTest Case 1: Deposit');
-        await testDeposit(1.0); // Deposit 1 ETH
-        await testDeposit(2.5); // Deposit 2.5 ETH
-        
-        // Test Case 2: Borrow
-        console.log('\nTest Case 2: Borrow');
-        await testBorrow(0.5); // Borrow 0.5 ETH
-        await testBorrow(1.0); // Borrow 1.0 ETH
-        
-        // Test Case 3: Repay
-        console.log('\nTest Case 3: Repay');
-        await testRepay(0.3); // Repay 0.3 ETH
-        await testRepay(0.7); // Repay 0.7 ETH
-        
-        // Test Case 4: Withdraw
-        console.log('\nTest Case 4: Withdraw');
-        await testWithdraw(0.5); // Withdraw 0.5 ETH
-        await testWithdraw(1.0); // Withdraw 1.0 ETH
-        
-        // Test Case 5: Transfer
-        console.log('\nTest Case 5: Transfer');
-        await testTransfer(0.1); // Transfer 0.1 ETH
-        
-        console.log('\nAll test cases completed!');
-        console.log('Full Transaction Logs:', transactionLogs);
-        
-    } catch (error) {
-        console.error('Test Cases Failed:', error);
-    }
-}
-
-// Individual test functions
-async function testDeposit(amount) {
-    try {
-        console.log(`Testing Deposit: ${amount} ETH`);
-        const initialBalance = await getBalanceNumber();
-        
-        // Perform deposit
-        document.getElementById('depositAmount').value = amount;
-        await deposit();
-        
-        const finalBalance = await getBalanceNumber();
-        
-        logTransaction('TEST_DEPOSIT', {
+        // Show receipt and update UI
+        showTransactionReceipt(
+            'Transfer',
             amount,
-            initialBalance,
-            finalBalance,
-            success: true
-        });
-        
-        console.log('Deposit Test Result:', {
-            amount,
-            initialBalance,
-            finalBalance,
-            difference: finalBalance - initialBalance
-        });
-        
-    } catch (error) {
-        logTransaction('TEST_DEPOSIT_ERROR', {
-            amount,
-            error: error.message
-        });
-        console.error('Deposit Test Failed:', error);
-    }
-}
-
-async function testBorrow(amount) {
-    try {
-        console.log(`Testing Borrow: ${amount} ETH`);
-        const initialBalance = await getBalanceNumber();
-        const initialBorrows = lendingPoolState.userBorrows;
-        
-        // Perform borrow
-        document.getElementById('borrowAmount').value = amount;
-        await borrow();
-        
-        const finalBalance = await getBalanceNumber();
-        const finalBorrows = lendingPoolState.userBorrows;
-        
-        logTransaction('TEST_BORROW', {
-            amount,
-            initialBalance,
-            finalBalance,
-            initialBorrows,
-            finalBorrows,
-            success: true
-        });
-        
-        console.log('Borrow Test Result:', {
-            amount,
-            initialBalance,
-            finalBalance,
-            borrowDifference: finalBorrows - initialBorrows
-        });
-        
-    } catch (error) {
-        logTransaction('TEST_BORROW_ERROR', {
-            amount,
-            error: error.message
-        });
-        console.error('Borrow Test Failed:', error);
-    }
-}
-
-async function testRepay(amount) {
-    try {
-        console.log(`Testing Repay: ${amount} ETH`);
-        const initialBalance = await getBalanceNumber();
-        const initialBorrows = lendingPoolState.userBorrows;
-        
-        // Mock the prompt function for testing
-        window.prompt = () => amount.toString();
-        await repay();
-        
-        const finalBalance = await getBalanceNumber();
-        const finalBorrows = lendingPoolState.userBorrows;
-        
-        logTransaction('TEST_REPAY', {
-            amount,
-            initialBalance,
-            finalBalance,
-            initialBorrows,
-            finalBorrows,
-            success: true
-        });
-        
-        console.log('Repay Test Result:', {
-            amount,
-            initialBalance,
-            finalBalance,
-            repayDifference: initialBorrows - finalBorrows
-        });
-        
-    } catch (error) {
-        logTransaction('TEST_REPAY_ERROR', {
-            amount,
-            error: error.message
-        });
-        console.error('Repay Test Failed:', error);
-    }
-}
-
-async function testWithdraw(amount) {
-    try {
-        console.log(`Testing Withdraw: ${amount} ETH`);
-        const initialBalance = await getBalanceNumber();
-        const initialDeposits = lendingPoolState.userDeposits;
-        
-        // Mock the prompt function for testing
-        window.prompt = () => amount.toString();
-        await withdraw();
-        
-        const finalBalance = await getBalanceNumber();
-        const finalDeposits = lendingPoolState.userDeposits;
-        
-        logTransaction('TEST_WITHDRAW', {
-            amount,
-            initialBalance,
-            finalBalance,
-            initialDeposits,
-            finalDeposits,
-            success: true
-        });
-        
-        console.log('Withdraw Test Result:', {
-            amount,
-            initialBalance,
-            finalBalance,
-            withdrawDifference: initialDeposits - finalDeposits
-        });
-        
-    } catch (error) {
-        logTransaction('TEST_WITHDRAW_ERROR', {
-            amount,
-            error: error.message
-        });
-        console.error('Withdraw Test Failed:', error);
-    }
-}
-
-async function testTransfer(amount) {
-    try {
-        console.log(`Testing Transfer: ${amount} ETH`);
-        const initialBalance = await getBalanceNumber();
-        
-        // Get first friend's address for testing
-        const recipient = friends[0]?.address;
-        if (!recipient) throw new Error('No recipient available for testing');
-        
-        // Perform transfer
-        document.getElementById('recipientSelect').value = recipient;
-        document.getElementById('amount').value = amount;
-        await transfer();
-        
-        const finalBalance = await getBalanceNumber();
-        
-        logTransaction('TEST_TRANSFER', {
-            amount,
+            await wallet.getAddress(),
             recipient,
-            initialBalance,
-            finalBalance,
-            success: true
-        });
+            tx.hash
+        );
         
-        console.log('Transfer Test Result:', {
-            amount,
-            recipient,
-            initialBalance,
-            finalBalance,
-            transferDifference: initialBalance - finalBalance
-        });
+        await updateBalances();
+        
+        // Clear form
+        document.getElementById('transferAmount').value = '';
+        recipientSelect.value = '';
         
     } catch (error) {
-        logTransaction('TEST_TRANSFER_ERROR', {
-            amount,
-            error: error.message
-        });
-        console.error('Transfer Test Failed:', error);
+        console.error('Transfer error:', error);
+        showNotification('Transfer failed: ' + error.message, true);
     }
 }
 
-// Add test button to UI (optional)
-function addTestButton() {
-    const navbar = document.querySelector('.navbar');
-    const testButton = document.createElement('button');
-    testButton.className = 'action-btn';
-    testButton.innerHTML = '<i class="fas fa-vial"></i> Run Tests';
-    testButton.onclick = runTestCases;
-    navbar.appendChild(testButton);
+// Add recipient change handler
+function handleRecipientChange() {
+    const recipientSelect = document.getElementById('recipient');
+    const customAddressInput = document.getElementById('customAddress');
+    
+    if (recipientSelect.value === 'custom') {
+        customAddressInput.style.display = 'block';
+    } else {
+        customAddressInput.style.display = 'none';
+    }
 }
 
 // Update showTransactionReceipt function
-async function showTransactionReceipt(type, details, currentBalance) {
-    const modal = document.getElementById('receiptModal');
-    const overlay = document.getElementById('overlay');
-    const timestamp = new Date().toLocaleString();
-    
-    // Set timestamp
-    document.getElementById('receiptTimestamp').textContent = timestamp;
-    
-    // Create receipt content based on transaction type
-    let receiptContent = '';
-    
-    // Transaction type header
-    receiptContent += `
-        <div class="receipt-row">
-            <strong>Transaction Type:</strong>
-            <span>${type}</span>
-        </div>
-    `;
-    
-    // Add transaction-specific details
-    switch(type) {
-        case 'DEPOSIT':
-            receiptContent += `
-                <div class="receipt-row">
-                    <span>Amount Deposited:</span>
-                    <span>${details.amount} ETH</span>
-                </div>
-            `;
-            break;
-        case 'WITHDRAW':
-            receiptContent += `
-                <div class="receipt-row">
-                    <span>Amount Withdrawn:</span>
-                    <span>${details.amount} ETH</span>
-                </div>
-            `;
-            break;
-        case 'BORROW':
-            receiptContent += `
-                <div class="receipt-row">
-                    <span>Amount Borrowed:</span>
-                    <span>${details.amount} ETH</span>
-                </div>
-                <div class="receipt-row">
-                    <span>Collateral Required:</span>
-                    <span>${(details.amount * lendingPoolState.collateralRatio / 100).toFixed(4)} ETH</span>
-                </div>
-            `;
-            break;
-        case 'REPAY':
-            receiptContent += `
-                <div class="receipt-row">
-                    <span>Amount Repaid:</span>
-                    <span>${details.amount} ETH</span>
-                </div>
-            `;
-            break;
-        case 'TRANSFER':
-            receiptContent += `
-                <div class="receipt-row">
-                    <span>Amount Sent:</span>
-                    <span>${details.amount} ETH</span>
-                </div>
-                <div class="receipt-row">
-                    <span>Recipient:</span>
-                    <span>${details.recipient.slice(0, 6)}...${details.recipient.slice(-4)}</span>
-                </div>
-            `;
-            break;
+function showTransactionReceipt(type, amount, from, to, hash) {
+    try {
+        const modal = document.getElementById('receiptModal');
+        if (!modal) {
+            console.error('Receipt modal not found');
+            return;
+        }
+
+        // Update receipt details
+        document.getElementById('receiptType').textContent = type;
+        document.getElementById('receiptAmount').textContent = `${amount} ETH`;
+        document.getElementById('receiptFrom').textContent = `${from.slice(0, 6)}...${from.slice(-4)}`;
+        document.getElementById('receiptTo').textContent = `${to.slice(0, 6)}...${to.slice(-4)}`;
+        document.getElementById('receiptHash').textContent = `${hash.slice(0, 6)}...${hash.slice(-4)}`;
+        document.getElementById('receiptTime').textContent = new Date().toLocaleString();
+        
+        // Show modal with animation
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.classList.add('show');
+        
+        console.log('Receipt modal displayed');
+    } catch (error) {
+        console.error('Error showing receipt:', error);
     }
-    
-    // Add balance information
-    receiptContent += `
-        <div class="receipt-row" style="margin-top: 15px;">
-            <strong>Current Balance:</strong>
-            <strong>${currentBalance} ETH</strong>
-        </div>
-    `;
-    
-    // Update receipt details
-    document.getElementById('receiptDetails').innerHTML = receiptContent;
-    
-    // Show overlay and modal with fade
-    overlay.style.display = 'block';
-    modal.style.display = 'block';
-    
-    // Trigger reflow to ensure animation plays
-    void overlay.offsetWidth;
-    void modal.offsetWidth;
-    
-    overlay.classList.add('fade-in');
-    modal.classList.add('fade-in');
 }
 
-// Update closeReceipt function
 function closeReceipt() {
-    const modal = document.getElementById('receiptModal');
-    const overlay = document.getElementById('overlay');
-    
-    // Add fade out animation
-    overlay.classList.remove('fade-in');
-    modal.classList.remove('fade-in');
-    overlay.classList.add('fade-out');
-    modal.classList.add('fade-out');
-    
-    // Wait for animation to complete before hiding
-    setTimeout(() => {
-        modal.style.display = 'none';
-        overlay.style.display = 'none';
-        // Remove animation classes
-        overlay.classList.remove('fade-out');
-        modal.classList.remove('fade-out');
-    }, 300); // Match animation duration (0.3s = 300ms)
-}
-
-// Add click handler for overlay to close receipt
-document.getElementById('overlay').addEventListener('click', closeReceipt);
-
-// Add this function to update recent activity
-async function updateRecentActivity() {
-    const recentActivity = document.querySelector('.recent-activity');
-    const activityContent = document.createElement('div');
-    
-    // Get last 5 transactions from logs
-    const recentTransactions = transactionLogs.slice(-5).reverse();
-    
-    const activityHTML = recentTransactions.map(log => {
-        const date = new Date(log.timestamp).toLocaleString();
-        let activityText = '';
-        let iconClass = '';
-        
-        switch(log.type) {
-            case 'DEPOSIT':
-                iconClass = 'fas fa-arrow-down received';
-                activityText = `Deposited ${log.details.amount} ETH`;
-                break;
-            case 'WITHDRAW':
-                iconClass = 'fas fa-arrow-up sent';
-                activityText = `Withdrew ${log.details.amount} ETH`;
-                break;
-            case 'BORROW':
-                iconClass = 'fas fa-hand-holding-usd received';
-                activityText = `Borrowed ${log.details.amount} ETH`;
-                break;
-            case 'REPAY':
-                iconClass = 'fas fa-hand-holding-usd sent';
-                activityText = `Repaid ${log.details.amount} ETH`;
-                break;
-            case 'TRANSFER':
-                iconClass = 'fas fa-paper-plane sent';
-                activityText = `Sent ${log.details.amount} ETH to ${log.details.recipient.slice(0, 6)}...`;
-                break;
+    try {
+        const modal = document.getElementById('receiptModal');
+        if (!modal) {
+            console.error('Modal not found');
+            return;
         }
         
-        return `
-            <div class="activity-item">
-                <div class="activity-icon ${log.type.toLowerCase()}">
-                    <i class="${iconClass}"></i>
-                </div>
-                <div class="activity-details">
-                    <div class="activity-text">${activityText}</div>
-                    <div class="activity-date">${date}</div>
-                </div>
-                <div class="activity-amount">
-                    ${log.currentBalance} ETH
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    activityContent.innerHTML = activityHTML || '<div class="no-activity">No recent activity</div>';
-    
-    // Clear previous content and add new
-    const activityContainer = recentActivity.querySelector('.section-title').nextElementSibling;
-    if (activityContainer) {
-        activityContainer.remove();
+        // Add fade-out animation
+        modal.style.opacity = '0';
+        
+        // Remove show class after animation
+        setTimeout(() => {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+        }, 300);
+    } catch (error) {
+        console.error('Error closing receipt:', error);
     }
-    recentActivity.appendChild(activityContent);
 }
 
-// Update the getCachedBalance function to handle multiple addresses
-async function getCachedBalance(address, forceRefresh = false) {
-    const now = Date.now();
-
-    const cachedData = balanceCache.get(address);
-    
-    if (!forceRefresh && 
-        cachedData && 
-        (now - cachedData.timestamp) < CACHE_DURATION) {
-        return cachedData.balance;
-    }
-
-    const balance = await provider.getBalance(address);
-    balanceCache.set(address, {
-        timestamp: now,
-        balance: balance
-    });
-    
-    return balance;
-}
-
-// Add batch balance fetching
-async function batchGetBalances(addresses) {
-    const now = Date.now();
-    const balancesToFetch = [];
-    const results = new Map();
-
-    // Check cache first
-    addresses.forEach(address => {
-        const cachedData = balanceCache.get(address);
-        if (cachedData && (now - cachedData.timestamp) < CACHE_DURATION) {
-            results.set(address, cachedData.balance);
-        } else {
-            balancesToFetch.push(address);
-        }
-    });
-
-    // Fetch only uncached balances
-    if (balancesToFetch.length > 0) {
-        const promises = balancesToFetch.map(address => 
-            provider.getBalance(address).then(balance => {
-                balanceCache.set(address, {
-                    timestamp: now,
-                    balance: balance
-                });
-                results.set(address, balance);
-            })
-        );
-        await Promise.all(promises);
-    }
-
-    return results;
+// Add this function to test the modal
+function testModal() {
+    showTransactionReceipt(
+        'Test Transfer',
+        '1.0',
+        '0x1234567890abcdef',
+        '0xabcdef1234567890',
+        '0x9876543210fedcba'
+    );
 }

@@ -1,0 +1,617 @@
+:root {
+    --primary-color: #1a73e8;
+    --secondary-color: #f8f9fa;
+    --text-color: #202124;
+    --text-secondary: #5f6368;
+    --background-color: #f5f5f5;
+    --card-background: white;
+    --border-color: #dadce0;
+    --sidebar-width: 250px;
+    --success-color: #34a853;
+    --error-color: #ea4335;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #6e45e2 0%, #88d3ce 100%) fixed;
+    color: var(--text-color);
+    line-height: 1.6;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--card-background);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+}
+
+.sidebar nav {
+    flex-grow: 1;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.sidebar a.active,
+.sidebar a:hover {
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
+}
+
+.sidebar .material-icons {
+    margin-right: 0.75rem;
+}
+
+/* Main Content Styles */
+.main-content {
+    width: 100%;
+    margin-left: 0;
+    padding: 2rem;
+    background: transparent;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.account-avatar {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    background-color: var(--secondary-color);
+    border-radius: 50%;
+}
+
+.account-avatar img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.account-avatar span {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Balance Cards */
+.balance-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: none;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), #88d3ce);
+    opacity: 0.7;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.percentage {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.percentage.positive {
+    color: var(--success-color);
+    background-color: rgba(52, 168, 83, 0.1);
+}
+
+.balance-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.balance-details {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.action-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Forms */
+.transfer-form,
+.deposit-form,
+.withdraw-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+input, select, button {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #1557b0;
+}
+
+/* Transaction History */
+.transaction-history table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.transaction-history th,
+.transaction-history td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Notifications */
+#notifications {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.notification {
+    background-color: var(--success-color);
+    color: white;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.notification.error {
+    background-color: var(--error-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+        padding: 1rem;
+    }
+
+    .sidebar span:not(.material-icons) {
+        display: none;
+    }
+
+    .main-content {
+        padding: 1rem;
+    }
+
+    .top-bar {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .account-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .account-avatar span {
+        display: none;
+    }
+}
+
+/* Add these styles for the logout button */
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.logout-btn:hover {
+    background-color: var(--error-color);
+    color: white;
+    border-color: var(--error-color);
+}
+
+.logout-btn .material-icons {
+    font-size: 1.2rem;
+}
+
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Account Selection Page Styles */
+.account-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--background-color);
+    padding: 1rem;
+}
+
+.account-card {
+    background-color: var(--card-background);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 480px;
+}
+
+.account-card h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--text-color);
+}
+
+.account-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.account-option {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.account-option:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--primary-color);
+}
+
+.account-option.selected {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.account-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    margin-right: 1rem;
+}
+
+.account-details {
+    flex: 1;
+}
+
+.account-name {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.account-address {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.account-balance {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.selected .account-balance,
+.selected .account-address {
+    color: white;
+}
+
+.connect-button {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    margin-top: 2rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.connect-button:hover {
+    background-color: #1557b0;
+}
+
+.connect-button:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+.material-icons {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.material-icons:hover {
+    color: var(--primary-color);
+}
+
+/* Add styles for custom address input */
+#customAddress {
+    display: none;
+    margin-top: 0.5rem;
+}
+
+.transfer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.transfer-form input,
+.transfer-form select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.transfer-form button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.transfer-form button:hover {
+    background-color: #1557b0;
+}
+
+/* Transaction Receipt Modal Styles */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9999;
+}
+
+.modal-backdrop.show {
+    display: flex !important;
+    opacity: 1 !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.receipt-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.receipt-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.receipt-header h2 {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.receipt-content {
+    margin-bottom: 1.5rem;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.receipt-label {
+    color: var(--text-secondary);
+}
+
+.receipt-value {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.receipt-footer {
+    text-align: center;
+}
+
+.close-receipt {
+    padding: 1rem 2.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.close-receipt:hover {
+    background-color: #1557b0;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+    }
+}
+
+@keyframes slideIn {
+    0% {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Add helper text styles */
+.helper-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+/* Update action card styles */
+.action-card h2 {
+    margin-bottom: 0.5rem;
+}
+
+.action-card button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.action-card button::before {
+    font-family: 'Material Icons';
+    font-size: 1.2rem;
+}
+
+/* Specific button styles */
+.transfer-form button::before {
+    content: 'send';
+}
+
+.deposit-form button::before {
+    content: 'account_balance_wallet';
+}
+
+.withdraw-form button::before {
+    content: 'download';
+} 
